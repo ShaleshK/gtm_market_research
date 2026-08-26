@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments & local caches
+.venv/
+.uv/
+
+# Prevent tracking local environment files
+.env
+.env.local
+
+# Prevent tracking downloaded Service Account Keys
+*.json
+
