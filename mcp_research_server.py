@@ -1,9 +1,23 @@
 import os
-from mcp.server.fastmcp import FastMCP
-import requests
-from dotenv import load_dotenv, find_dotenv
+import sys
+from pathlib import Path
 
-# Automatically searches the current folder, then climbs recursively up parent directories until it targets your true .env file!
+# Force-insert the active virtual environment site-packages path to prevent missing module errors
+venv_site_packages = str(Path(__file__).resolve().parents[1] / ".venv" / "Lib" / "site-packages")
+if venv_site_packages not in sys.path:
+    sys.path.insert(0, venv_site_packages)
+
+try:
+    from mcp.server.fastmcp import FastMCP
+    import requests
+    from dotenv import load_dotenv, find_dotenv
+except ImportError as e:
+    # Explicitly write crashes to a local diagnostic error file since standard output is hijacked by stdio
+    with open("mcp_crash_log.txt", "w") as f:
+        f.write(f"Import Initialization Failure: {str(e)}\n")
+    sys.exit(1)
+
+# Dynamically locate your parent folder .env file registry
 load_dotenv(find_dotenv())
 
 # Initialize FastMCP Server Object
@@ -17,7 +31,7 @@ def desk_research_search(query: str) -> dict:
     """
     api_key = os.getenv("SERPAPI_API_KEY")
     if not api_key:
-        return {"error": "Missing SerpAPI Key configuration token inside .env file."}
+        return {"error": "Missing SERPAPI_API_KEY inside your environment variables."}
         
     url = "https://serpapi.com"
     params = {
@@ -28,11 +42,10 @@ def desk_research_search(query: str) -> dict:
     }
     
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=15)
         data = response.json()
         
         results = []
-        # Extract top-tier primary organic evidence streams
         for item in data.get("organic_results", []):
             results.append({
                 "title": item.get("title"),
@@ -45,5 +58,8 @@ def desk_research_search(query: str) -> dict:
         return {"error": f"Handshake network failure: {str(e)}"}
 
 if __name__ == "__main__":
-    # Boots the server container via Standard Input/Output channel vectors
-    mcp.run()
+    # 🎯 PERMANENT WINDOWS FIX: Switch from standard I/O pipes to a dedicated web network socket
+    import uvicorn
+    # Boots up as a persistent local network API listening service on port 8000
+    mcp.run(transport="sse")
+
