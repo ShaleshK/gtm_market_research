@@ -160,12 +160,25 @@ if st.button("🚀 Execute Hierarchical Workflow", type="primary"):
                     expected_output="Formatted markdown layout containing tables and SWOT criteria blocks.",
                     agent=analyst_agent
                 )
+                # 🎯 TARGET FIXED: Sanitize user input text to use as a clean file name token
+                clean_filename_token = user_prompt.strip().replace(" ", "_").replace('"', "").replace("'", "")
+                
+                # Ensure a dedicated output folder exists inside the repository footprint
+                output_directory = root_dir / "output"
+                output_directory.mkdir(exist_ok=True)
+                
+                # Construct the customized dynamic path string asset
+                final_report_path = str(output_directory / f"{clean_filename_token}_Strategy_Report.md")
+                
+                # --- Define the Finalized Task Card ---
                 task_gtm_draft = Task(
                     description="Compile the finalized publication-ready GTM strategy document. Detail ideal customer profiles and a launch plan.",
                     expected_output="Full length GTM planning report containing precise markdown headers.",
                     agent=strategy_agent,
-                    output_file="GTM_Strategy_Report.md" # Automatically outputs to file asset
+                    # Dynamic naming allocation targeting the dedicated directory structure natively
+                    output_file=final_report_path 
                 )
+
                 
                 # Simulated incremental feedback loops while the actual multi-agent threads process
                 status_messages = [
