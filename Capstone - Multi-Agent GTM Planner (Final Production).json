@@ -1,0 +1,324 @@
+{
+  "name": "Capstone - Multi-Agent GTM Planner (Final Production)",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentURL": "1qi8Ul6N8Bl8CTjClUDwINXk8j_1Wmd-6hM9Lv3wnorU\n",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $json.output }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        288,
+        128
+      ],
+      "id": "50f96580-e8d8-466a-92ae-16f4c506cff8",
+      "name": "Google Docs - Update Content",
+      "credentials": {
+        "googleApi": {
+          "id": "mJGLBDPOE5UDdc6s",
+          "name": "Google Service Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -1504,
+        128
+      ],
+      "id": "c0c46969-a958-4dbf-9a1c-ac6afb990efc",
+      "name": "When chat message received",
+      "webhookId": "80aa4b7b-2cac-4050-b784-735e95843114"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.output }}\n",
+        "options": {
+          "systemMessage": "You are the Senior Competitive Intelligence Analyst. Ingest the 5 strategic vectors and compile a competitive comparison table and SWOT matrix text grid."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -576,
+        128
+      ],
+      "id": "ba950bac-0723-4d09-9199-340dbd90cb8c",
+      "name": "Analyst Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "=={{ $json.cleaned_search_data }}\n",
+        "options": {
+          "systemMessage": "You are the Head GTM Planner. Ingest this web research text data and map out 5 critical strategic vectors."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -912,
+        128
+      ],
+      "id": "3de33727-9434-4870-9eac-a3f95831beb6",
+      "name": "Head Planner Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.output }}\n",
+        "options": {
+          "systemMessage": "You are the Principal Go-To-Market Strategist. Ingest the SWOT and comparison tables. Generate segmented Ideal Customer Profiles and a 90-day launch map timeline report."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -272,
+        128
+      ],
+      "id": "e009ecfc-d6e7-421d-902e-4575ab469151",
+      "name": "Strategy Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        336
+      ],
+      "id": "adcfcc3c-7035-4ba5-8b79-c3a79fa58874",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "gXor3AKfm1LZVeIQ",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        336
+      ],
+      "id": "705f3a29-40f9-4274-88ee-fdeb6bb3df4f",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "gXor3AKfm1LZVeIQ",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        336
+      ],
+      "id": "90cc29db-e7f9-4601-9391-87cc373bd750",
+      "name": "Ollama Chat Model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "gXor3AKfm1LZVeIQ",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "=={{ $json.chatInput }}\n"
+            },
+            {
+              "name": "api_key",
+              "value": "5201602022ff23ae1f2c9be9faf11fa6353cdab2a8c5095ed838c577e89303dd"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1264,
+        128
+      ],
+      "id": "78b05f1c-916a-4481-9f96-61d7db17c41d",
+      "name": "SerpAPI HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🎯 VERSION SYNC: Grabs incoming data using standard n8n arrays\nconst inputItems = $input.all();\nconst firstItem = inputItems.length > 0 ? inputItems[0].json : {};\n\n// 1. Ingest the raw JSON data block from the preceding HTTP Request node\nconst rawResults = firstItem.organic_results || [];\nlet continuousText = \"\";\n\n// 2. Loop through and extract ONLY the clean text data pieces\nrawResults.forEach((result, index) => {\n    continuousText += `Source ${index + 1}: ${result.title}\\nLink: ${result.link}\\nSnippet: ${result.snippet}\\n\\n`;\n});\n\nif (!continuousText) {\n    continuousText = \"No direct organic market evidence snippets were retrieved from the search index.\";\n}\n\n// 3. Output a clean text variable contract that your Analyst Agent can read effortlessly\nreturn {\n    cleaned_search_data: continuousText\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1072,
+        128
+      ],
+      "id": "d0210b57-ea1a-46f6-957c-3abe639f0f51",
+      "name": "Data Cleanser - JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "SerpAPI HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Head Planner Agent": {
+      "main": [
+        [
+          {
+            "node": "Analyst Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyst Agent": {
+      "main": [
+        [
+          {
+            "node": "Strategy Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strategy Agent": {
+      "main": [
+        [
+          {
+            "node": "Google Docs - Update Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Head Planner Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyst Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Strategy Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Data Cleanser - JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Cleanser - JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Analyst Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Head Planner Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ad946191-d93a-45c9-bc2a-702c41813f99",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c7109ecd1bfdc252d31a92125bcb91c8ee76a2bb626c560d4757490c39245087"
+  },
+  "nodeGroups": [],
+  "id": "ppxrwSnlLcAgtcY6",
+  "tags": []
+}
