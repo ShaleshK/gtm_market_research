@@ -171,7 +171,7 @@
             },
             {
               "name": "api_key",
-              "value": "5201602022ff23ae1f2c9be9faf11fa6353cdab2a8c5095ed838c577e89303dd"
+              "value": "YOUR_SERPAPI_API_KEY"
             }
           ]
         },
