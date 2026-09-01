@@ -2,233 +2,221 @@ import os
 import sys
 import subprocess
 import time
+import pathlib
 from pathlib import Path
 from dotenv import load_dotenv
-from crewai import Agent, Task, Crew, Process
-from crewai_tools import MCPServerAdapter
-from mcp import StdioServerParameters
-from langchain_openai import AzureChatOpenAI
-import streamlit as st
 
-# ---------- 1) Streamlit View Port UI & Theme Setup ----------
+# Core Orchestration Components
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import MCPServerAdapter
+import streamlit as st
+import pypdf
+
+# 🎨 1. UI Layout Configuration
 st.set_page_config(
-    page_title="CrewAI Multi-Agent GTM Generator",
-    page_icon="🎯",
+    page_title="CrewAI Universal & Classic GTM Synthesizer",
+    page_icon="🔮",
     layout="wide"
 )
 
-# Traversal Path Math: Fetch keys from your root environment file (.env)
+# 📂 Traversal Path Mappings & Keys Fetching
 root_dir = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=root_dir / ".env")
 
-# ---------- 2) Sidebar Metric Tracker Layout Panel ----------
+# Helper function to extract text cleanly from uploaded PDF/Text files
+def extract_file_content(uploaded_file) -> str:
+    if uploaded_file is None:
+        return ""
+    name = uploaded_file.name.lower()
+    if name.endswith('.pdf'):
+        try:
+            pdf_reader = pypdf.PdfReader(uploaded_file)
+            return "\n".join([page.extract_text() or "" for page in pdf_reader.pages])
+        except Exception as e:
+            return f"Error parsing PDF metadata: {str(e)}"
+    else:
+        return uploaded_file.read().decode("utf-8", errors="ignore")
+
+# 📊 2. Sidebar Layout Panel
 with st.sidebar:
-    st.markdown("### 🛠️ Tool Status")
-    st.success("SerpAPI: ✅ Active")
-    st.success("Scraping: ✅ Available")
+    st.markdown("### 🛠️ System Tool Status")
+    st.success("🟢 FastMCP Server: Active")
+    st.success("🔎 Web Scraping: Available")
+    st.markdown("")
+    st.markdown("### 🔌 MCP Network Connection")
+    st.success("🔗 Connected: 2 Research Tools")
     
     st.markdown("---")
-    st.markdown("### 🔗 MCP Connection")
-    st.success("Connected (5 tools)")
+    st.subheader("🎯 Optional: Target Output Blueprint")
+    st.caption("Leave empty for Classic GTM Market Research Mode")
+    template_file = st.file_uploader(
+        "Upload an exemplar file showing what the finished product should look like:", 
+        type=["txt", "md", "pdf"]
+    )
     
-    # Matching your instructor's status indicator list panels exactly
-    st.caption("• company_overview")
-    st.caption("• list_competitors")
-    st.caption("• product_portfolio")
-    st.caption("• pricing_snapshot")
-    st.caption("• recent_news_pulse")
+    st.subheader("📁 Optional: Source Knowledge Context")
+    context_files = st.file_uploader(
+        "Upload raw source input files (Course documents, 10Ks, data files):", 
+        type=["txt", "md", "pdf"], 
+        accept_multiple_files=True
+    )
 
-# ---------- 3) Main UI Application Content Dashboard Panel ----------
-st.title("🎯 CrewAI Multi-Agent GTM Generator")
-st.caption("Using OPENAI model via env keys")
+# 📥 3. Main UI Application Content Dashboard Panel
+st.title("🔮 Dual-Mode Universal Multi-Agent Orchestrator")
+st.caption("Using Local Llama 3.1 Model via Port :11434")
 
-# Instructor's Class Brief Info Banner Component Box
 st.info(
-    "**We are launching 'MarketVision AI'**, an AI-powered market intelligence platform that "
-    "automates market research and GTM planning for B2B SaaS companies.\n\n"
-    "**Target:** US market, mid-market SaaS companies (50-500 employees) | "
-    "**Differentiator:** Multi-agent AI system for comprehensive analysis."
+    "💡 **Dynamic Mode Engine Active**: If you upload template and context files in the sidebar, this app acts as a **Template Synthesizer**. "
+    "If you leave the sidebar empty, it acts as your **Classic Multi-Agent Market Research and GTM Generator** natively!"
 )
 
-# User Request Input Field Form Box
+# Request Input Field
 user_prompt = st.text_input(
-    label="Refine Research Focus:",
-    placeholder="Research topic (e.g., 'OpenAI competitors', 'AI market analysis')...",
-    label_visibility="collapsed"
+    "Define Research Focus / Prompts Guidance Parameters:",
+    placeholder="e.g., 'DeepSeek competitors' or 'OpenAI market analysis'"
 )
 
-# Form Trigger Submission Button Handler
-if st.button("🚀 Execute Hierarchical Workflow", type="primary"):
+# 🚀 4. Execution Submission Button Handler
+if st.button("Execute Multi-Agent Workflow", type="primary"):
     if not user_prompt:
         st.warning("Please enter a research topic refinement parameter before running.")
     else:
-        st.markdown("### ⚙️ Starting hierarchical workflow with openai...")
+        st.markdown("### 🔄 Starting Multi-Agent Pipeline...")
         
-        # Initialize animated progress tracking indicators
+        # Initialize progress tracking indicators
         progress_bar = st.progress(0)
         status_text = st.empty()
         
-        # Proactively alert the user about the background agent window
-        st.toast("⚡ Research focus parameters accepted successfully!", icon="✅")
-        
-        status_text.markdown("🔄 *Initializing background infrastructure...*")
+        st.toast("Parameters accepted successfully!", icon="🔮")
+        status_text.markdown("🔮 Initializing background infrastructures...")
         progress_bar.progress(10)
         
+        # 🎯 FALLBACK DETECTOR: Determine which track we are running based on sidebar inputs
+        is_template_mode = template_file is not None
+        
+        # Extract file data in-memory if available
+        with st.spinner("Analyzing uploaded documentation streams..."):
+            target_template_text = extract_file_content(template_file)[:6000] if is_template_mode else ""
+            compiled_context_text = ""
+            if context_files:
+                for f in context_files:
+                    compiled_context_text += f"\n\n--- Source Document: {f.name} ---\n" + extract_file_content(f)
+            compiled_context_text = compiled_context_text[:12000]
+
         try:
-            # 1. Bind your high-performance local Llama 3.1 sandbox model natively using CrewAI's LLM wrapper
-            # 🎯 PERMANENT BLOCKADE BYPASS: Fully strips out the 'stop' parameter error by running locally over Ollama
-            from crewai import LLM
-            
-            azure_llm = LLM(
+            # Bind your local Llama model via CrewAI wrapper
+            local_llm = LLM(
                 model="ollama/llama3.1",
                 base_url="http://localhost:11434"
             )
-
-
-            # Formulate absolute path to your background server file cleanly
-            server_script_path = str(root_dir / "mcp_research_server.py")
             
-            # CRITICAL WINDOWS FIX: Pre-warm the background subprocess shell ahead of the adapter
-            status_text.markdown("📡 *Pre-warming FastMCP Server process pipeline...*")
-            progress_bar.progress(25)
-            
-            # 2. Package your client network link inside a standard configuration dictionary contract
-            # 🎯 RESOLVES VALUEERROR: Directly satisfies the adapter's expected data type parameter check
-            server_config = {
-                "url": "http://localhost:8000/sse"
-            }
-            
-            status_text.markdown("📡 *Establishing secure network handshake with your FastMCP server pool...*")
+            # FastMCP Client Connection Configuration Dictionary
+            server_config = {"url": "http://localhost:8000/sse"}
+            status_text.markdown("🔌 Establishing secure network handshake with your FastMCP server pool...")
             progress_bar.progress(40)
             
-            # 3. Mount your custom MCP research tools by passing your new configuration dictionary
             with MCPServerAdapter(server_config) as mcp_tools:
-                
-                status_text.markdown("👥 *Orchestrating specialized agent memory matrices...*")
+                status_text.markdown("🤖 Orchestrating specialized agent memory matrices...")
                 progress_bar.progress(55)
-                
-                # --- Your remaining definitions for your 4 agents and tasks continue right beneath here untouched ---
 
-                
-                # --- Define the 4 Core Agents ---
-                head_planner = Agent(
-                    role="Head GTM Planner and Orchestrator",
-                    goal="Coordinate the research workflow streams and synthesize specialist findings.",
-                    backstory="Corporate systems operator who structures raw project briefs.",
-                    llm=azure_llm,
+                # Initialize the 4 Core Roles
+                structural_architect = Agent(
+                    role="Head GTM Framework Architect",
+                    goal="Coordinate the research workflow streams and synthesize structural findings.",
+                    backstory="An expert operator who structures clean brief skeletons matching project metrics perfectly.",
+                    llm=local_llm,
                     verbose=True
                 )
-                
-                research_agent = Agent(
+
+                research_scientist = Agent(
                     role="Primary Market Research Scientist",
-                    goal="Gather empirical evidence and retrieve competitor data structures using tools.",
-                    backstory="Data-mining specialist who extracts clean links.",
-                    tools=mcp_tools,  # Attaches your FastMCP tools cleanly to this specific agent
-                    llm=azure_llm,
+                    goal="Gather empirical evidence and retrieve competitor data structures using search tools.",
+                    backstory="A data-mining specialist capable of compiling multi-source research strings via FastMCP.",
+                    tools=mcp_tools,
+                    llm=local_llm,
                     verbose=True
                 )
-                
-                analyst_agent = Agent(
+
+                data_analyst = Agent(
                     role="Senior Competitive Intelligence Analyst",
-                    goal="Convert raw snippets into structured arrays, SWOT, and 4P matrices.",
-                    backstory="Strategic modeling expert focused on industry analysis.",
-                    llm=azure_llm,
+                    goal="Convert raw text strings into structured data arrays, SWOT matrices, and 4P tables.",
+                    backstory="A strategic modeling engineer focused on data synthesis and market pattern alignments.",
+                    llm=local_llm,
                     verbose=True
                 )
-                
-                strategy_agent = Agent(
+
+                executive_strategist = Agent(
                     role="Principal Go-To-Market Strategist",
-                    goal="Formulate high-differentiation GTM playbooks and 90-day launch maps.",
-                    backstory="Growth architect translating analytical grids into plans.",
-                    llm=azure_llm,
+                    goal="Formulate high-differentiation GTM playbooks, customer profiles, and 90-day launch maps.",
+                    backstory="A growth architect who translates complex tables into publication-ready tactical reports.",
+                    llm=local_llm,
                     verbose=True
                 )
-                
-                # --- Define the Chained Tasks ---
-                task_plan = Task(
-                    description=f"Analyze user context: '{user_prompt}'. Outline 5 critical target research vectors for MarketVision AI.",
-                    expected_output="Markdown summary list containing 5 research questions.",
-                    agent=head_planner
-                )
-                task_research = Task(
-                    description="Run your FastMCP desk research search tool across the scoped target nodes. Gather competitor links.",
-                    expected_output="JSON data contract containing verified link variables and snippets.",
-                    agent=research_agent
-                )
-                task_analysis = Task(
-                    description="Ingest the research data strings and generate a competitive landscape table alongside a SWOT matrix.",
-                    expected_output="Formatted markdown layout containing tables and SWOT criteria blocks.",
-                    agent=analyst_agent
-                )
-                # 🎯 TARGET FIXED: Sanitize user input text to use as a clean file name token
-                clean_filename_token = user_prompt.strip().replace(" ", "_").replace('"', "").replace("'", "")
-                
-                # Ensure a dedicated output folder exists inside the repository footprint
+
+                # 🎯 CONFIGURING DYNAMIC TASK DESCRIPTIONS BASED ON THE RUNNING MODE
+                if is_template_mode:
+                    # Universal Mode Context Prompts
+                    desc_structure = f"Analyze this target output template schema text carefully:\n\"\"\"\n{target_template_text}\n\"\"\"\nGenerate an empty Markdown framework matching its exact heading styles, layout bounds, and length caps."
+                    desc_gather = f"Read this raw source data context text block:\n\"\"\"\n{compiled_context_text}\n\"\"\"\nUse your web search tools to gather any missing updates or facts based on the user's specific request: '{user_prompt}'."
+                    desc_align = "Ingest the empty template framework blueprint and fill out every heading section completely using the raw factual data gathered by the Research Scientist."
+                    desc_publish = "Polish the finalized synthesized document. Ensure headers are formatted correctly, remove empty text variables, and verify strict style alignment."
+                else:
+                    # Classic Hardcoded GTM Mode Context Prompts
+                    desc_structure = f"Analyze context and outline 5 critical target research vectors for the market focus parameters: '{user_prompt}'."
+                    desc_gather = f"Run your FastMCP research search tools across the scoped target nodes for the prompt focus: '{user_prompt}'. Gather clean competitor links and market snippet data variables."
+                    desc_align = "Ingest the raw research data snippets string grid and generate a clean, formatted competitive landscape comparison table alongside a qualitative SWOT analysis matrix."
+                    desc_publish = f"Compile the finalized publication-ready GTM strategy document for '{user_prompt}'. Detail segmented Ideal Customer Profiles (ICPs) and a comprehensive 90-day execution launch plan report."
+
+                # Map text variable naming conventions for folder saving paths safely
+                clean_filename_token = "".join(c for c in user_prompt if c.isalnum() or c.isspace()).strip().replace(" ", "_")
+                if not clean_filename_token:
+                    clean_filename_token = "GTM_Output"
+                    
                 output_directory = root_dir / "output"
                 output_directory.mkdir(exist_ok=True)
-                
-                # Construct the customized dynamic path string asset
                 final_report_path = str(output_directory / f"{clean_filename_token}_Strategy_Report.md")
-                
-                # --- Define the Finalized Task Card ---
-                task_gtm_draft = Task(
-                    description="Compile the finalized publication-ready GTM strategy document. Detail ideal customer profiles and a launch plan.",
-                    expected_output="Full length GTM planning report containing precise markdown headers.",
-                    agent=strategy_agent,
-                    # Dynamic naming allocation targeting the dedicated directory structure natively
-                    output_file=final_report_path 
-                )
 
-                
-                # Simulated incremental feedback loops while the actual multi-agent threads process
+                # Bind Task Classes
+                task_1 = Task(description=desc_structure, expected_output="Markdown summary list containing structural headers or vector questions.", agent=structural_architect)
+                task_2 = Task(description=desc_gather, expected_output="A clean text data contract containing verified data variables, quotes, and links.", agent=research_scientist)
+                task_3 = Task(description=desc_align, expected_output="Formatted markdown layout containing competitive landscape criteria data tables.", agent=data_analyst)
+                task_4 = Task(description=desc_publish, expected_output="Full length comprehensive strategy planning report document with markdown headers.", agent=executive_strategist, output_file=final_report_path)
+
+                # Simulated progress tracking strings
                 status_messages = [
-                    "📋 Head Planner: Analyzing brief and charting 5 critical research target nodes... (Minutes 0-2)",
-                    "📡 Research Agent: Launching FastMCP search tools and scraping competitor pricing models... (Minutes 2-5)",
-                    "📊 Analyst Agent: Ingesting raw JSON data contracts and compiling SWOT/4P text grids... (Minutes 5-8)",
-                    "🧠 Strategy Agent: Constructing Ideal Customer Profiles and mapping 90-day GTM milestones... (Minutes 8-12)",
-                    "📝 Finalizing Document: Packaging markdown text structures and exporting reports... (Minutes 12-15)"
-                ]
-                
-                                # Assemble your automated execution engine crew
-                gtm_crew = Crew(
-                    agents=[head_planner, research_agent, analyst_agent, strategy_agent],
-                    tasks=[task_plan, task_research, task_analysis, task_gtm_draft],
-                    process=Process.sequential,  # Sequences execution step-by-step
-                    verbose=True
-                )
-                
-                # 🚀 UI STATUS UPDATE & PROGRESS TIMER INTEGRATION
-                status_messages = [
-                    "📋 Head Planner: Analyzing brief and charting 5 critical research target nodes... (Minutes 0-2)",
-                    "📡 Research Agent: Launching FastMCP search tools and scraping competitor pricing models... (Minutes 2-5)",
-                    "📊 Analyst Agent: Ingesting raw JSON data contracts and compiling SWOT/4P text grids... (Minutes 5-8)",
-                    "🧠 Strategy Agent: Constructing Ideal Customer Profiles and mapping 90-day GTM milestones... (Minutes 8-12)",
-                    "📝 Finalizing Document: Packaging markdown text structures and exporting reports... (Minutes 12-15)"
-                ]
-                
-                # Slowly advance the progress bar through the agent stages to keep the UI active
-                for i in range(45):
-                    current_progress = 55 + int((i / 45) * 35)  # Scales smoothly from 55% up to 90%
-                    progress_bar.progress(current_progress)
+                    "🔮 Agent 1: Outlining strategy vectors and reverse-engineering requirements...",
+                    "🔎 Agent 2: Executing FastMCP network search queries and scraping internet data...",
+                    "📊 Agent 3: Processing raw snippet data models and compiling structured matrices...",
+                    "📝 Agent 4: Crafting Ideal Customer Profiles and structuring 90-day launch roadmap..."]
                     
-                    # Cycle through the messages based on the current step
-                    msg_index = min(i // 9, len(status_messages) - 1)
-                    status_text.markdown(f"⏳ **Status:** *{status_messages[msg_index]}*")
-                    time.sleep(0.5)  # Keep it responsive without locking up Streamlit's web thread
+                # Initialize Crew Engine
+                gtm_crew = Crew(agents=[structural_architect, research_scientist, data_analyst, executive_strategist],
+                tasks=[task_1, task_2, task_3, task_4],
+                process=Process.sequential,
+                verbose=True)
                 
-                status_text.markdown("🤖 **Status:** *Agents are processing your final analytical layers and compiling the GTM report now...*")
-                
-                # ⚙️ Execute the real background multi-agent generation loop
-                final_report = gtm_crew.kickoff()
-                
-                # Render results to web view once fully completed
-                progress_bar.progress(100)
-                status_text.empty()
-                
-                st.success("🏆 Go-To-Market Blueprint Compiled Successfully!")
-                st.markdown("### 📝 Generated Strategy Report")
-                st.markdown(final_report)
-                
+                # Update progress bar smoothly across the execution window
+                for i in range(40):
+                    current_progress = 55 + i
+                    progress_bar.progress(current_progress)
+                    msg_index = i // 10
+                    if msg_index < len(status_messages):
+                        status_text.markdown(f"⏳ Status: {status_messages[msg_index]}")
+                        time.sleep(0.4)
+                        
+                        status_text.markdown("⚙️ Status: Finalizing report files assembly and writing output text structures...")
+                        
+                        # Fire the background orchestration loops
+                        final_report = gtm_crew.kickoff()
+                        
+                        # Complete workflow paths
+                        progress_bar.progress(100)
+                        status_text.empty()
+                        st.success("🏆 Report Pipeline Completed and Compiled Successfully!")
+                        st.markdown("### 📋 Generated Production Output Preview:")
+                        st.markdown(final_report)
+                        st.info(f"💾 File Successfully Exported to: {final_report_path}")
+                        
         except Exception as e:
             progress_bar.empty()
             status_text.empty()
