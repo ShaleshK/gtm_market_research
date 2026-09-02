@@ -18,7 +18,7 @@
       "type": "n8n-nodes-base.googleDocs",
       "typeVersion": 2,
       "position": [
-        288,
+        192,
         128
       ],
       "id": "50f96580-e8d8-466a-92ae-16f4c506cff8",
@@ -37,7 +37,7 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.4,
       "position": [
-        -1504,
+        -1616,
         128
       ],
       "id": "c0c46969-a958-4dbf-9a1c-ac6afb990efc",
@@ -49,13 +49,13 @@
         "promptType": "define",
         "text": "=={{ $json.output }}\n",
         "options": {
-          "systemMessage": "You are the Senior Competitive Intelligence Analyst. Ingest the 5 strategic vectors and compile a competitive comparison table and SWOT matrix text grid."
+          "systemMessage": "You are the Senior Competitive Intelligence Analyst. Ingest the empty template frames or strategic vectors passed to you, match them with the live web scraped text contracts, and cleanly compile structured comparison data tables and a qualitative SWOT analysis matrix."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -576,
+        -480,
         128
       ],
       "id": "ba950bac-0723-4d09-9199-340dbd90cb8c",
@@ -66,13 +66,13 @@
         "promptType": "=define",
         "text": "=={{ $json.cleaned_search_data }}\n",
         "options": {
-          "systemMessage": "You are the Head GTM Planner. Ingest this web research text data and map out 5 critical strategic vectors."
+          "systemMessage": "You are the Head GTM Framework Architect. Check if the user has provided a source blueprint URL or document structure. If found, reverse-engineer its layout headings, sections, and tone constraints. If no template exists, analyze the live search text variables to outline 5 strategic marketing vectors."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -912,
+        -752,
         128
       ],
       "id": "3de33727-9434-4870-9eac-a3f95831beb6",
@@ -83,13 +83,13 @@
         "promptType": "define",
         "text": "=={{ $json.output }}\n",
         "options": {
-          "systemMessage": "You are the Principal Go-To-Market Strategist. Ingest the SWOT and comparison tables. Generate segmented Ideal Customer Profiles and a 90-day launch map timeline report."
+          "systemMessage": "You are the Principal Go-To-Market Strategist and Lead Publisher. Take the generated data matrix layout and output a full-length strategy planning report. \n\nCRITICAL REFINEMENT PROTOCOL: If the user provides a follow-up adjustment instruction in the conversation history chat flow, read their specific critique guidelines, systematically rewrite the report to apply their requested modifications, and overwrite the output file structure flawlessly.\n"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -272,
+        -192,
         128
       ],
       "id": "e009ecfc-d6e7-421d-902e-4575ab469151",
@@ -171,7 +171,7 @@
             },
             {
               "name": "api_key",
-              "value": "YOUR_SERPAPI_API_KEY"
+              "value": "YOUR_SERPAPI_KEY"
             }
           ]
         },
@@ -180,7 +180,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
-        -1264,
+        -1456,
         128
       ],
       "id": "78b05f1c-916a-4481-9f96-61d7db17c41d",
@@ -193,11 +193,44 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1072,
+        -1248,
         128
       ],
       "id": "d0210b57-ea1a-46f6-957c-3abe639f0f51",
       "name": "Data Cleanser - JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=={{ $(\"When chat message received\").item.json.chatInput }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1056,
+        128
+      ],
+      "id": "9eb3fac1-d3ad-4d86-b7a1-4d0350669bd1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const htmlText = $input.first().json.text || \"\";\n// Natively strip out scripts, styles, and tags using regex\nlet cleanText = htmlText.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n                        .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n                        .replace(/<[^>]+>/g, ' ')\n                        .replace(/\\s+/g, ' ')\n                        .strip();\nreturn { clean_web_text: cleanText.substring(0, 8000) }; // Context protection guard\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        128
+      ],
+      "id": "50a7ca0c-6438-4d49-82f8-96124ff1ffab",
+      "name": "Code in JavaScript"
     }
   ],
   "pinData": {},
@@ -313,7 +346,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "ad946191-d93a-45c9-bc2a-702c41813f99",
+  "versionId": "5592399a-f344-4a11-9ee6-508a99836b36",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "c7109ecd1bfdc252d31a92125bcb91c8ee76a2bb626c560d4757490c39245087"
