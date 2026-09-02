@@ -12,6 +12,10 @@ from crewai_tools import MCPServerAdapter
 import streamlit as st
 import pypdf
 
+# Web Ingestion Utilities
+import requests
+from bs4 import BeautifulSoup
+
 # 🎨 1. UI Layout Configuration
 st.set_page_config(
     page_title="CrewAI Universal & Classic GTM Synthesizer",
@@ -23,7 +27,7 @@ st.set_page_config(
 root_dir = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=root_dir / ".env")
 
-# Helper function to extract text cleanly from uploaded PDF/Text files
+# 🛠️ 2. Core Text Extraction Utilities
 def extract_file_content(uploaded_file) -> str:
     if uploaded_file is None:
         return ""
@@ -37,7 +41,25 @@ def extract_file_content(uploaded_file) -> str:
     else:
         return uploaded_file.read().decode("utf-8", errors="ignore")
 
-# 📊 2. Sidebar Layout Panel
+def extract_url_content(url: str) -> str:
+    """Scrapes raw web addresses and returns clean literal paragraph text string markers."""
+    if not url:
+        return ""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            # Decompose background boilerplate components
+            for element in soup(["script", "style", "nav", "footer", "header"]):
+                element.decompose()
+            clean_text = soup.get_text(separator="\n", strip=True)
+            return clean_text
+    except Exception as e:
+        return f"Failed to ingest URL track targets: {str(e)}"
+    return ""
+
+# 📊 3. Sidebar Layout Panel
 with st.sidebar:
     st.markdown("### 🛠️ System Tool Status")
     st.success("🟢 FastMCP Server: Active")
@@ -47,36 +69,49 @@ with st.sidebar:
     st.success("🔗 Connected: 2 Research Tools")
     
     st.markdown("---")
-    st.subheader("🎯 Optional: Target Output Blueprint")
+    st.subheader("🎯 Target Output Blueprint (The Shape)")
     st.caption("Leave empty for Classic GTM Market Research Mode")
+    
+    # Dual Ingestion Layout Options for the Template Target
     template_file = st.file_uploader(
-        "Upload an exemplar file showing what the finished product should look like:", 
+        "Upload a reference template file (.pdf, .txt, .md):", 
         type=["txt", "md", "pdf"]
     )
+    template_url = st.text_input(
+        "OR paste a Blueprint URL (Google Sheet 'Publish to Web' link or layout page):",
+        placeholder="https://google.com..."
+    )
     
-    st.subheader("📁 Optional: Source Knowledge Context")
+    st.markdown("---")
+    st.subheader("📁 Source Knowledge Context (The Facts)")
+    
+    # Dual Ingestion Layout Options for the Data Inputs
     context_files = st.file_uploader(
-        "Upload raw source input files (Course documents, 10Ks, data files):", 
+        "Upload raw source input files:", 
         type=["txt", "md", "pdf"], 
         accept_multiple_files=True
     )
+    context_url = st.text_input(
+        "OR paste a reference Web URL for targeted research:",
+        placeholder="https://yahoo.com..."
+    )
 
-# 📥 3. Main UI Application Content Dashboard Panel
+# 📥 4. Main UI Application Content Dashboard Panel
 st.title("🔮 Dual-Mode Universal Multi-Agent Orchestrator")
 st.caption("Using Local Llama 3.1 Model via Port :11434")
 
 st.info(
-    "💡 **Dynamic Mode Engine Active**: If you upload template and context files in the sidebar, this app acts as a **Template Synthesizer**. "
-    "If you leave the sidebar empty, it acts as your **Classic Multi-Agent Market Research and GTM Generator** natively!"
+    "💡 **Dynamic Mode Engine Active**: If you fill out template or context items in the sidebar, this app acts as a **Universal Template Synthesizer**. "
+    "If you leave the sidebar options completely blank, it runs as your **Classic Multi-Agent Market Research and GTM Generator** natively!"
 )
 
 # Request Input Field
 user_prompt = st.text_input(
     "Define Research Focus / Prompts Guidance Parameters:",
-    placeholder="e.g., 'DeepSeek competitors' or 'OpenAI market analysis'"
+    placeholder="e.g., 'Caterpillar competitors' or 'DeepSeek market segment trends'"
 )
 
-# 🚀 4. Execution Submission Button Handler
+# 🚀 5. Execution Submission Button Handler
 if st.button("Execute Multi-Agent Workflow", type="primary"):
     if not user_prompt:
         st.warning("Please enter a research topic refinement parameter before running.")
@@ -92,16 +127,27 @@ if st.button("Execute Multi-Agent Workflow", type="primary"):
         progress_bar.progress(10)
         
         # 🎯 FALLBACK DETECTOR: Determine which track we are running based on sidebar inputs
-        is_template_mode = template_file is not None
+        is_template_mode = (template_file is not None) or (len(template_url.strip()) > 0)
         
-        # Extract file data in-memory if available
-        with st.spinner("Analyzing uploaded documentation streams..."):
-            target_template_text = extract_file_content(template_file)[:6000] if is_template_mode else ""
+        # Extract template and file data in-memory if available
+        with st.spinner("Analyzing uploaded documentation and network web streams..."):
+            # A. Extract Target Structural Template Content
+            if template_file:
+                target_template_text = extract_file_content(template_file)[:6000]
+            elif template_url:
+                target_template_text = extract_url_content(template_url)[:6000]
+            else:
+                target_template_text = ""
+                
+            # B. Extract Source Data Knowledge Content
             compiled_context_text = ""
             if context_files:
                 for f in context_files:
-                    compiled_context_text += f"\n\n--- Source Document: {f.name} ---\n" + extract_file_content(f)
-            compiled_context_text = compiled_context_text[:12000]
+                    compiled_context_text += f"\n\n--- Source File: {f.name} ---\n" + extract_file_content(f)
+            if context_url:
+                compiled_context_text += f"\n\n--- Ingested Source URL Context ({context_url}) ---\n" + extract_url_content(context_url)
+                
+            compiled_context_text = compiled_context_text[:12000] # Safe scaling boundary cache limit
 
         try:
             # Bind your local Llama model via CrewAI wrapper
@@ -171,7 +217,7 @@ if st.button("Execute Multi-Agent Workflow", type="primary"):
                 clean_filename_token = "".join(c for c in user_prompt if c.isalnum() or c.isspace()).strip().replace(" ", "_")
                 if not clean_filename_token:
                     clean_filename_token = "GTM_Output"
-                    
+
                 output_directory = root_dir / "output"
                 output_directory.mkdir(exist_ok=True)
                 final_report_path = str(output_directory / f"{clean_filename_token}_Strategy_Report.md")
@@ -187,14 +233,17 @@ if st.button("Execute Multi-Agent Workflow", type="primary"):
                     "🔮 Agent 1: Outlining strategy vectors and reverse-engineering requirements...",
                     "🔎 Agent 2: Executing FastMCP network search queries and scraping internet data...",
                     "📊 Agent 3: Processing raw snippet data models and compiling structured matrices...",
-                    "📝 Agent 4: Crafting Ideal Customer Profiles and structuring 90-day launch roadmap..."]
-                    
+                    "📝 Agent 4: Crafting Ideal Customer Profiles and structuring 90-day launch roadmap..."
+                ]   
+
                 # Initialize Crew Engine
-                gtm_crew = Crew(agents=[structural_architect, research_scientist, data_analyst, executive_strategist],
-                tasks=[task_1, task_2, task_3, task_4],
-                process=Process.sequential,
-                verbose=True)
-                
+                gtm_crew = Crew(
+                    agents=[structural_architect, research_scientist, data_analyst, executive_strategist],
+                    tasks=[task_1, task_2, task_3, task_4],
+                    process=Process.sequential,
+                    verbose=True
+                )
+
                 # Update progress bar smoothly across the execution window
                 for i in range(40):
                     current_progress = 55 + i
@@ -203,21 +252,22 @@ if st.button("Execute Multi-Agent Workflow", type="primary"):
                     if msg_index < len(status_messages):
                         status_text.markdown(f"⏳ Status: {status_messages[msg_index]}")
                         time.sleep(0.4)
-                        
-                        status_text.markdown("⚙️ Status: Finalizing report files assembly and writing output text structures...")
-                        
-                        # Fire the background orchestration loops
-                        final_report = gtm_crew.kickoff()
-                        
-                        # Complete workflow paths
-                        progress_bar.progress(100)
-                        status_text.empty()
-                        st.success("🏆 Report Pipeline Completed and Compiled Successfully!")
-                        st.markdown("### 📋 Generated Production Output Preview:")
-                        st.markdown(final_report)
-                        st.info(f"💾 File Successfully Exported to: {final_report_path}")
-                        
+
+                status_text.markdown("⚙️ Status: Finalizing report files assembly and writing output text structures...")
+
+                # Fire the background orchestration loops
+                final_report = gtm_crew.kickoff()
+
+                # Complete workflow paths
+                progress_bar.progress(100)
+                status_text.empty()
+
+                st.success("🏆 Report Pipeline Completed and Compiled Successfully!")
+                st.markdown("### 📋 Generated Production Output Preview:")
+                st.markdown(final_report)
+                st.info(f"💾 File Successfully Exported to: {final_report_path}")
+        
         except Exception as e:
             progress_bar.empty()
             status_text.empty()
-            st.error(f"Execution Error: {str(e)}")
+            st.error(f"Execution Error: {str(e)}")  
